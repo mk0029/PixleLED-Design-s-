@@ -426,5 +426,28 @@ class PluginUploadTests(unittest.TestCase):
             self.assertFalse((Path(directory) / ".sample.upload").exists())
 
 
+class ToranRippleShowPluginTests(unittest.TestCase):
+    def setUp(self):
+        self.registry = PluginRegistry(Path(__file__).resolve().parent.parent / "custom_plugins")
+
+    def test_full_show_matches_toran_spec(self):
+        frames = self.registry.generate("toran_ripple_show", 40, 25, 30, 1800)
+        self.assertEqual(len(frames), 1800)
+        self.assertTrue(all(frame.shape == (25, 40, 3) and frame.dtype == np.uint8 for frame in frames))
+        self.assertLess(int(frames[0].max()), 32)
+        self.assertLess(int(frames[-1].max()), 32)
+        for index in range(1080 + 15, 1440 - 15, 30):
+            np.testing.assert_array_equal(frames[index][0], np.tile((255, 0, 0), (40, 1)))
+
+    def test_single_scenes_render_at_studio_grid(self):
+        for scene in range(1, 6):
+            with self.subTest(scene=scene):
+                frames = self.registry.generate("toran_ripple_show", 30, 20, 20, 4, {"scene": scene, "seconds": 2})
+                self.assertTrue(all(frame.shape == (20, 30, 3) for frame in frames))
+                self.assertTrue(any(np.any(frame) for frame in frames))
+        with self.assertRaises(ValueError):
+            self.registry.generate("toran_ripple_show", 40, 25, 30, 1, {"scene": 6})
+
+
 if __name__ == "__main__":
     unittest.main()
