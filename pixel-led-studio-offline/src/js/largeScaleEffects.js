@@ -13,7 +13,11 @@ export const LARGE_SCALE_ENGINES = [
   { id: 'split_horizon_wave', name: 'Two-Tone Split Horizon Wave', category: 'Facade & Curtain' },
   { id: 'diagonal_rainbow_curtain', name: 'Angled Diagonal Rainbow Curtain', category: 'Facade & Curtain' },
   { id: 'starlight_snow_drift', name: 'Starlight Snow Drift', category: 'Festive' },
+  { id: 'building_triple_mix', name: 'Building Triple Mix Show', category: 'Facade & Curtain' },
+  { id: 'thoran_dancer_color_bar', name: 'Thoran Dancing Character & Color Bar', category: 'Festive' },
 ];
+
+const ORIGINAL_COLOR_EFFECTS = new Set(['skyscraper_bottom_up_rise', 'building_triple_mix', 'thoran_dancer_color_bar']);
 
 const range = (key, label, min, max, step, value, unit = '') => ({ key, label, type: 'range', min, max, step, value, unit });
 const choice = (key, label, items, value) => ({ key, label, type: 'select', items, value });
@@ -21,6 +25,7 @@ const toggle = (key, label, value) => ({ key, label, type: 'toggle', value });
 
 function definitions(kind, width, height) {
   const speed = range('speed', 'Speed', 0.1, 3, 0.1, 1, '×');
+  const originalColors = choice('colorStyle', 'Colors', [['original', 'Original Show Colors'], ['palette', 'Use Color Mode']], 'original');
   const controls = {
     skyscraper_bottom_up_rise: [
       speed, range('waveStagger', 'Wave stagger', 0, 3, 0.1, 1.2, '×'),
@@ -54,6 +59,23 @@ function definitions(kind, width, height) {
       speed, range('angleDegrees', 'Curtain angle', -60, 60, 1, 28, '°'),
       range('bandWidth', 'Band width', 2, Math.max(2, Math.min(20, Math.max(width, height))), 1, Math.min(8, Math.max(width, height)), 'px'),
       choice('direction', 'Direction', DIRECTION_CHOICES, 'forward'),
+    ],
+    building_triple_mix: [
+      speed, choice('scene', 'Scene', [
+        ['all', 'All 3 scenes (18 s loop)'],
+        ['band', 'Color-Band Wipe + Sparkle Rain'],
+        ['cascade', 'Cyan Water-Drop Cascade'],
+        ['diagonal', 'Diagonal Rainbow Wave Curtain'],
+      ], 'all'),
+      originalColors,
+    ],
+    thoran_dancer_color_bar: [
+      speed, choice('scene', 'Scene', [
+        ['all', 'Both scenes (14 s loop)'],
+        ['dancer', 'Dancing Pixel Character'],
+        ['bar', 'Sweeping Color Bar + Starlight Rain'],
+      ], 'all'),
+      originalColors,
     ],
     starlight_snow_drift: [
       speed, range('density', 'Density', 0.05, 0.5, 0.01, 0.18),
@@ -331,6 +353,156 @@ function snowDrift(frame, width, height, index, fps, options, colors) {
   }
 }
 
+const BUILDING_REFERENCE = 40;
+const BUILDING_BAND_HUES = [0.33, 0.52, 0.08, 0, 0.16];
+
+function buildingTripleMix(frame, width, height, index, fps, options) {
+  const t = motionTime(index / fps, clamp(options.speed, 0.1, 3, 1), options.direction);
+  const sceneStart = { band: 0, cascade: 6, diagonal: 12 }[options.scene];
+  const phaseTime = sceneStart === undefined ? mod(t, 18) : sceneStart + mod(t, 6);
+  const scaleX = BUILDING_REFERENCE / width;
+  const scaleY = BUILDING_REFERENCE / height;
+  if (phaseTime < 6) {
+    const pt = phaseTime;
+    const bandHue = BUILDING_BAND_HUES[Math.floor(pt / 1.2) % BUILDING_BAND_HUES.length];
+    const bandCenter = (Math.sin(pt * 2.6) * 0.5 + 0.5) * (BUILDING_REFERENCE - 4) + 2;
+    const bandHalf = BUILDING_REFERENCE * 0.22;
+    for (let y = 0; y < height; y += 1) {
+      const ys = y * scaleY;
+      for (let x = 0; x < width; x += 1) {
+        if (y === 0) {
+          pixel(frame, width, height, x, y, [255, 30, 0]);
+          continue;
+        }
+        const distance = Math.abs(ys - bandCenter);
+        if (distance <= bandHalf) {
+          pixel(frame, width, height, x, y, hsvToRgb(bandHue, 1, Math.max(0.35, 1 - distance / (bandHalf * 1.25))));
+          continue;
+        }
+        const drip = Math.sin(ys * 0.55 - pt * 11 + hash(x, 0, 4040) * Math.PI * 2);
+        const twinkle = Math.sin(pt * 9 + hash(x, y, 4041) * Math.PI * 2);
+        if (drip > 0.72 && twinkle > 0.35) {
+          const value = Math.floor(180 + 75 * twinkle);
+          pixel(frame, width, height, x, y, [value, value, value]);
+        }
+      }
+    }
+  } else if (phaseTime < 12) {
+    const pt = phaseTime - 6;
+    for (let x = 0; x < width; x += 1) {
+      const xs = x * scaleX;
+      const waveShift = Math.sin(xs * 0.22 - pt * 2.5) * 4;
+      const dropSpeed = 0.55 + hash(x, 3, 4040) * 0.6;
+      const dropOffset = hash(x, 4, 4040) * BUILDING_REFERENCE;
+      for (let y = 0; y < height; y += 1) {
+        if (y === 0) {
+          pixel(frame, width, height, x, y, [255, 80, 140]);
+          continue;
+        }
+        const ys = y * scaleY;
+        const stream = Math.sin((ys + waveShift) * 0.48 - pt * 13 * dropSpeed + dropOffset);
+        const carrier = Math.sin((ys - pt * 5 + xs * 0.15) * 0.25) * 0.5 + 0.5;
+        const value = Math.max(0, stream) * (0.45 + 0.55 * carrier);
+        if (value > 0.12) {
+          pixel(frame, width, height, x, y, [
+            Math.floor(Math.min(255, 160 * value ** 2.2)),
+            Math.floor(Math.min(255, 220 * value ** 1.1)),
+            Math.floor(Math.min(255, 140 + 115 * value)),
+          ]);
+        }
+      }
+    }
+  } else {
+    const pt = phaseTime - 12;
+    for (let y = 0; y < height; y += 1) {
+      const ys = y * scaleY;
+      for (let x = 0; x < width; x += 1) {
+        if (y === 0) {
+          pixel(frame, width, height, x, y, [255, 20, 0]);
+          continue;
+        }
+        const xs = x * scaleX;
+        const diagonal = xs * 0.022 + ys * 0.018 - pt * 0.32;
+        const ripple = Math.sin(xs * 0.25 - ys * 0.2 - pt * 4) * 0.25 + 0.75;
+        pixel(frame, width, height, x, y, hsvToRgb(diagonal, 0.96, ripple));
+      }
+    }
+  }
+}
+
+const THORAN_REFERENCE = 20;
+const THORAN_DANCER_PALETTES = [
+  [[0, 210, 255], [255, 40, 220]],
+  [[255, 235, 120], [90, 70, 255]],
+  [[40, 255, 60], [255, 120, 200]],
+  [[255, 50, 50], [220, 240, 255]],
+];
+const THORAN_BAR_COLORS = [[255, 235, 170], [60, 255, 90], [0, 215, 255], [230, 100, 255]];
+const THORAN_BAR_LOOP = 4 * Math.PI / 1.35;
+
+function thoranDancer(frame, width, height, pt) {
+  const step = Math.floor(pt * 4.5);
+  const [outline, core] = THORAN_DANCER_PALETTES[Math.floor(step / 2) % THORAN_DANCER_PALETTES.length];
+  const armUp = step % 2 === 0;
+  const legStride = Math.floor(step / 2) % 2 === 0;
+  const leftArmY = armUp ? 0.38 : 0.46;
+  const rightArmY = armUp ? 0.46 : 0.38;
+  const leftLegEnd = legStride ? 0.9 : 0.8;
+  const rightLegEnd = legStride ? 0.8 : 0.9;
+  for (let y = 0; y < height; y += 1) {
+    const ny = y / Math.max(1, height - 1);
+    for (let x = 0; x < width; x += 1) {
+      const nx = x / Math.max(1, width - 1);
+      if (Math.sin(pt * 8 + hash(x, y, 2020) * Math.PI * 2) > 0.96) pixel(frame, width, height, x, y, [255, 170, 90]);
+      const inHead = ny >= 0.12 && ny <= 0.32 && nx >= 0.34 && nx <= 0.66;
+      const inFace = ny >= 0.17 && ny <= 0.28 && nx >= 0.4 && nx <= 0.6;
+      const inTorso = ny >= 0.33 && ny <= 0.68 && nx >= 0.32 && nx <= 0.68;
+      const inBelly = ny >= 0.38 && ny <= 0.62 && nx >= 0.41 && nx <= 0.59;
+      const inLeftArm = nx >= 0.14 && nx < 0.32 && Math.abs(ny - leftArmY) <= 0.06;
+      const inRightArm = nx > 0.68 && nx <= 0.86 && Math.abs(ny - rightArmY) <= 0.06;
+      const inLeftLeg = nx >= 0.35 && nx <= 0.46 && ny > 0.68 && ny <= leftLegEnd;
+      const inRightLeg = nx >= 0.54 && nx <= 0.65 && ny > 0.68 && ny <= rightLegEnd;
+      if (inFace || inBelly) pixel(frame, width, height, x, y, core);
+      else if (inHead || inTorso || inLeftArm || inRightArm || inLeftLeg || inRightLeg) pixel(frame, width, height, x, y, outline);
+    }
+  }
+}
+
+function thoranColorBar(frame, width, height, pt) {
+  const scaleX = THORAN_REFERENCE / width;
+  const scaleY = THORAN_REFERENCE / height;
+  const sweep = pt * 1.35;
+  const barCenter = (Math.cos(sweep) * -0.5 + 0.5) * (THORAN_REFERENCE - 4) + 2;
+  const barHalf = Math.max(2, THORAN_REFERENCE * 0.16);
+  const barColor = THORAN_BAR_COLORS[Math.floor(sweep / Math.PI) % THORAN_BAR_COLORS.length];
+  for (let y = 0; y < height; y += 1) {
+    const ys = y * scaleY;
+    for (let x = 0; x < width; x += 1) {
+      const xs = x * scaleX;
+      if (Math.abs(ys - barCenter) <= barHalf) {
+        const shimmer = 0.82 + 0.18 * Math.sin(xs * 1.4 + pt * 14);
+        pixel(frame, width, height, x, y, barColor.map((channel) => Math.floor(channel * shimmer)));
+        continue;
+      }
+      const drop = Math.sin(ys * 0.65 - pt * (6 + hash(x, 5, 2020) * 5) + hash(x, 0, 2020) * Math.PI * 2);
+      const twinkle = Math.sin(pt * 8 + hash(x, y, 2020) * Math.PI * 2);
+      if (drop > 0.78 && twinkle > 0.25) {
+        const value = Math.floor(175 + 80 * twinkle);
+        pixel(frame, width, height, x, y, [value, Math.floor(value * 0.92), value]);
+      }
+    }
+  }
+}
+
+function thoranDancerColorBar(frame, width, height, index, fps, options) {
+  const t = motionTime(index / fps, clamp(options.speed, 0.1, 3, 1), options.direction);
+  if (options.scene === 'dancer') return thoranDancer(frame, width, height, mod(t, 6));
+  if (options.scene === 'bar') return thoranColorBar(frame, width, height, mod(t, THORAN_BAR_LOOP));
+  const phaseTime = mod(t, 14);
+  if (phaseTime < 6) return thoranDancer(frame, width, height, phaseTime);
+  return thoranColorBar(frame, width, height, phaseTime - 6);
+}
+
 const renderers = {
   skyscraper_bottom_up_rise: skyscraper,
   architectural_border_trace: borderTrace,
@@ -339,12 +511,14 @@ const renderers = {
   split_horizon_wave: horizon,
   diagonal_rainbow_curtain: diagonalCurtain,
   starlight_snow_drift: snowDrift,
+  building_triple_mix: buildingTripleMix,
+  thoran_dancer_color_bar: thoranDancerColorBar,
 };
 
 export const LargeScaleEffects = Object.freeze({
   engines: LARGE_SCALE_ENGINES,
   isEffect: (kind) => Object.hasOwn(renderers, kind),
-  keepsOriginalColors: (kind, options = {}) => kind === 'skyscraper_bottom_up_rise' && options.colorStyle !== 'palette',
+  keepsOriginalColors: (kind, options = {}) => ORIGINAL_COLOR_EFFECTS.has(kind) && options.colorStyle !== 'palette',
   getParameters: definitions,
   defaultOptions(kind, _modifier, width = 30, height = 20) {
     const defaults = Object.fromEntries(definitions(kind, width, height).map((item) => [item.key, item.value]));

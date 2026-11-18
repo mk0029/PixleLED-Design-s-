@@ -19,15 +19,15 @@ test('Math Lab library provides 512 unique, validated logics across eight famili
 });
 
 test('engine catalog contains one preset per engine in six clean categories', () => {
-  assert.equal(EngineCore.presets.length, 42);
+  assert.equal(EngineCore.presets.length, 44);
   assert.equal(EngineCore.categories.length, 6);
   assert.equal(new Set(EngineCore.presets.map((preset) => preset.category)).size, 6);
-  assert.equal(new Set(EngineCore.presets.map((preset) => preset.id)).size, 42);
-  assert.equal(new Set(EngineCore.presets.map((preset) => preset.name)).size, 42);
+  assert.equal(new Set(EngineCore.presets.map((preset) => preset.id)).size, 44);
+  assert.equal(new Set(EngineCore.presets.map((preset) => preset.name)).size, 44);
   assert.deepEqual(EngineCore.categories.map((category) => category.name), [
     'Vertical Lines', 'Facade & Curtain', 'DJ & Club', 'Geometric', 'Festive', 'Typography',
   ]);
-  assert.equal(EngineCore.presets.some((preset) => /animal|danc|human|bird/i.test(preset.name)), false);
+  assert.equal(EngineCore.presets.some((preset) => preset.kind !== 'thoran_dancer_color_bar' && /animal|danc|human|bird/i.test(preset.name)), false);
 });
 
 test('typography engines render dual and vertical text with controllable backgrounds', () => {
@@ -104,7 +104,7 @@ test('single-line scan presets move down the matrix and return packed RGB frames
 });
 
 test('large-scale effects render at preset and custom matrix resolutions', () => {
-  assert.equal(EngineCore.largeScaleEffects.engines.length, 7);
+  assert.equal(EngineCore.largeScaleEffects.engines.length, 9);
   const expectedControls = {
     skyscraper_bottom_up_rise: ['waveStagger', 'tipGlow', 'direction'],
     architectural_border_trace: ['borderThickness', 'innerFrameScale', 'chaseMode'],
@@ -113,6 +113,8 @@ test('large-scale effects render at preset and custom matrix resolutions', () =>
     split_horizon_wave: ['splitRatio', 'waveHeight', 'seamThickness'],
     diagonal_rainbow_curtain: ['angleDegrees', 'bandWidth', 'direction'],
     starlight_snow_drift: ['density', 'swayAmount', 'tailLength'],
+    building_triple_mix: ['scene', 'colorStyle'],
+    thoran_dancer_color_bar: ['scene', 'colorStyle'],
   };
   for (const effect of EngineCore.largeScaleEffects.engines) {
     const preset = EngineCore.presets.find((item) => item.kind === effect.id);
@@ -300,6 +302,33 @@ test('skyscraper column rise keeps its skyline colors and scales to any matrix s
       assert.ok((g === 0 && b === 0) || Math.min(r, g, b) >= 232, 'palette mode recolors to the chosen color');
     }
   }
+});
+
+test('building triple mix and thoran dancer shows play every scene at any matrix size', () => {
+  const shows = {
+    building_triple_mix: [18, ['band', 'cascade', 'diagonal']],
+    thoran_dancer_color_bar: [14, ['dancer', 'bar']],
+  };
+  for (const [kind, [loopSeconds, scenes]] of Object.entries(shows)) {
+    const preset = EngineCore.presets.find((item) => item.kind === kind);
+    const params = EngineCore.getDynamicDefaults(kind, 30, 20);
+    assert.equal(params.colorStyle, 'original');
+    for (const [width, height] of [[1, 1], [8, 5], [20, 20], [40, 40], [64, 24], [24, 64]]) {
+      const frames = EngineCore.generateFrames({ engineId: preset.engineId, params }, width, height, loopSeconds * 2, 2);
+      assert.equal(frames.length, loopSeconds * 2);
+      if (width * height > 1) assert.ok(frames.every((frame) => frame.some((channel) => channel > 0)), `${kind} ${width}x${height} never goes blank`);
+    }
+    for (const scene of scenes) {
+      const [a, b] = EngineCore.generateFrames({ engineId: preset.engineId, params: { ...params, scene } }, 40, 40, 2, 3);
+      assert.notDeepEqual(a, b, `${kind} ${scene} animates`);
+    }
+  }
+  const building = EngineCore.presets.find((item) => item.kind === 'building_triple_mix');
+  const [diagonal] = EngineCore.generateFrames({
+    engineId: building.engineId,
+    params: { ...EngineCore.getDynamicDefaults('building_triple_mix', 40, 40), scene: 'diagonal' },
+  }, 40, 40, 1, 30);
+  assert.deepEqual([...diagonal.slice(0, 3)], [255, 20, 0]);
 });
 
 test('legacy cloned preset IDs resolve to the single unique engine ID', () => {
