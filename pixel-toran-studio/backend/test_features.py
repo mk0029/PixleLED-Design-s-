@@ -426,5 +426,83 @@ class PluginUploadTests(unittest.TestCase):
             self.assertFalse((Path(directory) / ".sample.upload").exists())
 
 
+class ToranVerticalLineEffectTests(unittest.TestCase):
+    def test_ripple_scenes_are_vertical_line_effects_with_original_colors(self):
+        names = {preset["base_name"] for preset in SCENE_PRESETS.values()
+                 if preset["family"] == "Vertical Line & Curtain Flows"}
+        for name in ("Multi-Band Sine Wave", "Concentric Diamond Ripple", "Multi-Point Water Drop Ripples",
+                     "Top-Border Rectangular Pulse", "Diagonal Chevron Wave"):
+            self.assertIn(name, names)
+        frames = generate_frames("top-border-rectangular-pulse--original-colors", 40, 25, 30, 30)
+        self.assertTrue(all(frame.shape == (25, 40, 3) for frame in frames))
+        np.testing.assert_array_equal(frames[15][0], np.tile((255, 0, 0), (40, 1)))
+        self.assertFalse(np.array_equal(frames[0], frames[29]))
+        mirrored = generate_frames("diagonal-chevron-wave--mirror-symmetry", 40, 25, 30, 1)[0]
+        np.testing.assert_array_equal(mirrored, mirrored[:, ::-1])
+
+
+class VerticalAnimationEffectTests(unittest.TestCase):
+    def test_twelve_vertical_animations_render_full_grid_frames_in_vertical_family(self):
+        presets = {preset["base_name"]: preset_id for preset_id, preset in SCENE_PRESETS.items()
+                   if preset["family"] == "Vertical Line & Curtain Flows" and preset["kind"].startswith("vline_")
+                   and preset["modifier"] == "original-colors"}
+        self.assertEqual(len(presets), 12)
+        for name, preset_id in presets.items():
+            frames = generate_frames(preset_id, 40, 25, 30, 30)
+            self.assertTrue(all(frame.shape == (25, 40, 3) and frame.dtype == np.uint8 for frame in frames), name)
+            self.assertTrue(np.any(frames[15]), name)
+            self.assertFalse(np.array_equal(frames[0], frames[29]), name)
+
+    def test_peak_hold_equalizer_draws_white_peaks_above_bars(self):
+        frame = generate_frames("peak-hold-equalizer-bars--original-colors", 40, 25, 30, 20)[-1]
+        self.assertTrue(np.any(np.all(frame == 255, axis=-1)))
+
+
+class ToranRippleShowPluginTests(unittest.TestCase):
+    def setUp(self):
+        self.registry = PluginRegistry(Path(__file__).resolve().parent.parent / "custom_plugins")
+
+    def test_full_show_matches_toran_spec(self):
+        frames = self.registry.generate("toran_ripple_show", 40, 25, 30, 1800)
+        self.assertEqual(len(frames), 1800)
+        self.assertTrue(all(frame.shape == (25, 40, 3) and frame.dtype == np.uint8 for frame in frames))
+        self.assertLess(int(frames[0].max()), 32)
+        self.assertLess(int(frames[-1].max()), 32)
+        for index in range(1080 + 15, 1440 - 15, 30):
+            np.testing.assert_array_equal(frames[index][0], np.tile((255, 0, 0), (40, 1)))
+
+    def test_single_scenes_render_at_studio_grid(self):
+        for scene in range(1, 6):
+            with self.subTest(scene=scene):
+                frames = self.registry.generate("toran_ripple_show", 30, 20, 20, 4, {"scene": scene, "seconds": 2})
+                self.assertTrue(all(frame.shape == (20, 30, 3) for frame in frames))
+                self.assertTrue(any(np.any(frame) for frame in frames))
+        with self.assertRaises(ValueError):
+            self.registry.generate("toran_ripple_show", 40, 25, 30, 1, {"scene": 6})
+
+    def test_single_scene_loops_every_fifth_of_the_show(self):
+        frames = self.registry.generate("toran_ripple_show", 40, 25, 30, 720, {"scene": 2})
+        np.testing.assert_array_equal(frames[0], frames[360])
+        self.assertFalse(np.array_equal(frames[0], frames[45]))
+
+    def test_catalog_exposes_param_ranges(self):
+        plugin = next(item for item in self.registry.catalog()["plugins"] if item["id"] == "toran_ripple_show")
+        self.assertEqual(plugin["ranges"]["scene"], [0, 5, 1])
+
+    def test_invalid_param_ranges_are_reported(self):
+        source = (
+            "PLUGIN_NAME = 'Bad ranges'\n"
+            "DEFAULT_PARAMS = {'level': 5}\n"
+            "PARAM_RANGES = {'level': (0, 3, 1)}\n"
+            "def generate(W, H, FPS, params):\n"
+            "    return []\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "bad.py").write_text(source)
+            catalog = PluginRegistry(Path(directory)).catalog()
+            self.assertEqual(catalog["plugins"], [])
+            self.assertIn("PARAM_RANGES", catalog["errors"][0]["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

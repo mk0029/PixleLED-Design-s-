@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,7 @@ from plugin_loader import MAX_PLUGIN_BYTES, PluginRegistry
 from avi_exporter import export_avi
 
 ROOT = Path(__file__).resolve().parent.parent
-FRONTEND = ROOT / "frontend"
+FRONTEND = Path(os.environ.get("FRONTEND_DIR", ROOT.parent / "pixel-led-studio-offline" / "dist")).resolve()
 EXPORTS = ROOT / "exports"
 PLUGINS = ROOT / "custom_plugins"
 MAX_REQUEST_BYTES = 32 * 1024 * 1024

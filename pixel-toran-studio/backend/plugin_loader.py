@@ -31,6 +31,7 @@ class PluginRegistry:
     def __init__(self, directory: Path):
         self.directory = directory
         self._plugins: dict[str, tuple[ModuleType, dict[str, int | float]]] = {}
+        self._ranges: dict[str, dict[str, list[float]]] = {}
         self._errors: list[dict[str, str]] = []
         self._lock = threading.RLock()
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -38,6 +39,7 @@ class PluginRegistry:
 
     def reload(self) -> dict[str, Any]:
         plugins: dict[str, tuple[ModuleType, dict[str, int | float]]] = {}
+        ranges: dict[str, dict[str, list[float]]] = {}
         errors: list[dict[str, str]] = []
         self.directory.mkdir(parents=True, exist_ok=True)
         for path in sorted(self.directory.glob("*.py")):
@@ -50,13 +52,16 @@ class PluginRegistry:
                 if plugin_id in plugins:
                     raise ValueError(f"Plugin ID {plugin_id} is duplicated.")
                 module = self._load_module(plugin_id, path)
-                plugins[plugin_id] = (module, self._validate_module(module))
+                defaults = self._validate_module(module)
+                ranges[plugin_id] = self._validate_ranges(module, defaults)
+                plugins[plugin_id] = (module, defaults)
             except Exception as error:
                 errors.append({"file": path.name, "error": str(error)})
                 sys.modules.pop(f"pixel_toran_plugin_{plugin_id}", None)
 
         with self._lock:
             self._plugins = plugins
+            self._ranges = ranges
             self._errors = errors
             return self.catalog()
 
@@ -68,6 +73,7 @@ class PluginRegistry:
                         "id": plugin_id,
                         "name": str(getattr(module, "PLUGIN_NAME", plugin_id)),
                         "params": params,
+                        "ranges": self._ranges.get(plugin_id, {}),
                     }
                     for plugin_id, (module, params) in sorted(self._plugins.items())
                 ],
@@ -161,6 +167,26 @@ class PluginRegistry:
         code = compile(path.read_bytes(), str(path), "exec")
         exec(code, module.__dict__)
         return module
+
+    @staticmethod
+    def _validate_ranges(module: ModuleType, defaults: dict[str, int | float]) -> dict[str, list[float]]:
+        ranges = getattr(module, "PARAM_RANGES", {})
+        if not isinstance(ranges, dict):
+            raise ValueError("PARAM_RANGES must be a dictionary of (min, max, step) entries.")
+        normalized: dict[str, list[float]] = {}
+        for key, bounds in ranges.items():
+            if key not in defaults:
+                raise ValueError(f"PARAM_RANGES key {key} is not in DEFAULT_PARAMS.")
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 3 or any(
+                isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(item)
+                for item in bounds
+            ):
+                raise ValueError(f"PARAM_RANGES[{key}] must be three finite numbers: (min, max, step).")
+            minimum, maximum, step = bounds
+            if not minimum <= defaults[key] <= maximum or step <= 0:
+                raise ValueError(f"PARAM_RANGES[{key}] must contain the default value and use a positive step.")
+            normalized[key] = [minimum, maximum, step]
+        return normalized
 
     @staticmethod
     def _validate_module(module: ModuleType) -> dict[str, int | float]:
