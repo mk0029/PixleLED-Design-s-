@@ -426,5 +426,16 @@ class PluginUploadTests(unittest.TestCase):
             self.assertFalse((Path(directory) / ".sample.upload").exists())
 
 
+class HealthRouteTests(unittest.TestCase):
+    def test_health_route_reports_ok_without_caching(self):
+        client = flask_app.test_client()
+        for path in ("/health", "/api/health"):
+            response = client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.get_json()["status"], "ok")
+            self.assertEqual(response.headers["Cache-Control"], "no-store")
+            self.assertEqual(client.head(path).status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()
