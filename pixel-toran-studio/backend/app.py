@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,7 @@ app = Flask(__name__, static_folder=str(FRONTEND), static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES
 CORS(app, origins=["http://127.0.0.1:5000", "http://localhost:5000"])
 plugin_registry = PluginRegistry(PLUGINS)
+STARTED_AT = time.time()
 
 
 def _integer(payload: dict[str, Any], key: str, default: int, minimum: int, maximum: int) -> int:
@@ -84,6 +87,14 @@ def _trusted_local_origin() -> bool:
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND, "index.html")
+
+
+@app.route("/health", methods=["GET", "HEAD"])
+@app.route("/api/health", methods=["GET", "HEAD"])
+def health():
+    response = jsonify({"status": "ok", "uptime_seconds": round(time.time() - STARTED_AT, 1)})
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/patterns")
@@ -203,4 +214,4 @@ def request_too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "5000")), debug=False)
