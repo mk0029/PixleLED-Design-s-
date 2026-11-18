@@ -25,6 +25,7 @@ function definitions(kind, width, height) {
     skyscraper_bottom_up_rise: [
       speed, range('waveStagger', 'Wave stagger', 0, 3, 0.1, 1.2, '×'),
       toggle('tipGlow', 'Bright leading tip', true),
+      choice('colorStyle', 'Colors', [['skyline', 'Skyline Gradient (original)'], ['palette', 'Use Color Mode']], 'skyline'),
       choice('direction', 'Direction', DIRECTION_CHOICES, 'forward'),
     ],
     architectural_border_trace: [
@@ -119,24 +120,57 @@ function fill(frame, width, height, color) {
   }
 }
 
+function hsvToRgb(hue, saturation, value) {
+  const h = mod(hue, 1) * 6;
+  const sector = Math.floor(h) % 6;
+  const f = h - Math.floor(h);
+  const p = value * (1 - saturation);
+  const q = value * (1 - f * saturation);
+  const u = value * (1 - (1 - f) * saturation);
+  const rgb = [[value, u, p], [q, value, p], [p, value, u], [p, q, value], [u, p, value], [value, p, q]][sector];
+  return rgb.map((channel) => Math.round(channel * 255));
+}
+
+const SKYSCRAPER_CYCLE_SECONDS = 5;
+const SKYSCRAPER_WINDOW = [255, 245, 235];
+
+function skyscraperLevel(progress, maxHeight) {
+  if (progress < 0.45) return (1 - (1 - progress / 0.45) ** 3) * maxHeight;
+  if (progress < 0.7) return maxHeight;
+  return (1 - ((progress - 0.7) / 0.3) ** 2) * maxHeight;
+}
+
 function skyscraper(frame, width, height, index, fps, options, colors) {
+  const seconds = index / fps;
   const speed = clamp(options.speed, 0.1, 3, 1);
   const timeDirection = options.direction === 'reverse' ? 'forward' : options.direction;
-  const t = motionTime(index / fps, speed, timeDirection);
+  const t = motionTime(seconds, speed, timeDirection);
   const stagger = clamp(options.waveStagger, 0, 3, 1.2);
-  const riseDirection = options.direction === 'reverse' || options.direction === 'top-down' ? 'top-down' : 'bottom-up';
+  const topDown = options.direction === 'reverse' || options.direction === 'top-down';
+  const skylineColors = options.colorStyle !== 'palette';
   for (let x = 0; x < width; x += 1) {
-    const phase = mod(t * 0.42 + Math.sin(x * 0.19 * stagger) * 0.2 + x / Math.max(1, width) * stagger, 1);
-    const rise = phase * height;
-    const tipRow = riseDirection === 'bottom-up' ? height - 1 - Math.floor(rise) : Math.floor(rise);
-    for (let y = 0; y < height; y += 1) {
-      const lit = riseDirection === 'bottom-up' ? y >= height - rise : y < rise;
-      if (!lit) continue;
-      const level = riseDirection === 'bottom-up' ? height - 1 - y : y;
-      const shade = 0.35 + 0.65 * (1 - level / Math.max(1, rise));
-      pixel(frame, width, height, x, y, colorAt(colors, x / Math.max(1, width - 1) * (colors.length - 1) + t * 0.6, shade));
+    const offset = x / Math.max(1, width - 1) * 1.5 * stagger + (hash(x, 1, 108) - 0.5) * 0.3;
+    const maxHeight = 0.55 + hash(x, 2, 108) * 0.45;
+    const progress = mod(t - offset, SKYSCRAPER_CYCLE_SECONDS) / SKYSCRAPER_CYCLE_SECONDS;
+    const topPixel = Math.round(skyscraperLevel(progress, maxHeight) * height);
+    for (let level = 0; level < height; level += 1) {
+      const y = topDown ? level : height - 1 - level;
+      if (level < topPixel) {
+        const heightRatio = level / Math.max(1, height - 1);
+        const windowPulse = Math.sin(t * 6 + hash(x, level, 211) * Math.PI * 2) * 0.5 + 0.5;
+        if (level % 2 === 1 && windowPulse > 0.65) {
+          pixel(frame, width, height, x, y, SKYSCRAPER_WINDOW);
+          continue;
+        }
+        const brightness = 0.55 + 0.45 * heightRatio;
+        const color = skylineColors
+          ? hsvToRgb(0.58 - heightRatio * 0.46 + t * 0.03, 0.92, brightness)
+          : colorAt(colors, heightRatio * (colors.length - 1) + t * 0.12, brightness);
+        pixel(frame, width, height, x, y, color);
+      } else if (level === topPixel && topPixel > 0 && options.tipGlow !== false) {
+        pixel(frame, width, height, x, y, [255, 255, 255]);
+      }
     }
-    if (options.tipGlow !== false) pixel(frame, width, height, x, tipRow, [255, 255, 255]);
   }
 }
 
@@ -310,6 +344,7 @@ const renderers = {
 export const LargeScaleEffects = Object.freeze({
   engines: LARGE_SCALE_ENGINES,
   isEffect: (kind) => Object.hasOwn(renderers, kind),
+  keepsOriginalColors: (kind, options = {}) => kind === 'skyscraper_bottom_up_rise' && options.colorStyle !== 'palette',
   getParameters: definitions,
   defaultOptions(kind, _modifier, width = 30, height = 20) {
     const defaults = Object.fromEntries(definitions(kind, width, height).map((item) => [item.key, item.value]));

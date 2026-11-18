@@ -276,6 +276,32 @@ test('optional animated backgrounds fill dark procedural, math and drawing pixel
   assert.notDeepEqual(rainbow[0], rainbow[1]);
 });
 
+test('skyscraper column rise keeps its skyline colors and scales to any matrix size', () => {
+  const preset = EngineCore.presets.find((item) => item.kind === 'skyscraper_bottom_up_rise');
+  const params = EngineCore.getDynamicDefaults('skyscraper_bottom_up_rise', 30, 20);
+  assert.equal(params.colorStyle, 'skyline');
+  for (const [width, height] of [[1, 1], [8, 5], [40, 25], [25, 40], [120, 80]]) {
+    const frames = EngineCore.generateFrames({ engineId: preset.engineId, params }, width, height, 150, 30);
+    assert.equal(frames.length, 150);
+    const lit = (frame, row) => frame.slice(row * width * 3, (row + 1) * width * 3).some((channel) => channel > 0);
+    assert.ok(frames.some((frame) => lit(frame, height - 1)), `${width}x${height} lights the bottom row`);
+    assert.ok(frames.some((frame) => !lit(frame, 0)), `${width}x${height} leaves the top dark while rising`);
+  }
+  const [frame] = EngineCore.generateFrames({ engineId: preset.engineId, params: { ...params, speed: 1 } }, 40, 25, 1, 30);
+  const bottom = frame.slice(24 * 40 * 3, 24 * 40 * 3 + 3);
+  if (bottom.some((channel) => channel > 0)) assert.ok(bottom[2] > bottom[0], 'skyline base is blue');
+  const palette = EngineCore.generateFrames({
+    engineId: preset.engineId,
+    params: { ...params, colorStyle: 'palette', colorMode: 'solid', solidColor: '#ff0000' },
+  }, 40, 25, 60, 30);
+  for (const paletteFrame of palette) {
+    for (let offset = 0; offset < paletteFrame.length; offset += 3) {
+      const [r, g, b] = paletteFrame.slice(offset, offset + 3);
+      assert.ok((g === 0 && b === 0) || Math.min(r, g, b) >= 232, 'palette mode recolors to the chosen color');
+    }
+  }
+});
+
 test('legacy cloned preset IDs resolve to the single unique engine ID', () => {
   const engineId = EngineCore.resolveEngineId('skyscraper-bottom-up-column-rise--reverse-flow');
   assert.equal(engineId, 'skyscraper_bottom_up_rise');

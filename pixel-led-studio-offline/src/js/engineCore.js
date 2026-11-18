@@ -457,6 +457,13 @@ function renderEngine(engineId, width, height, fps, seconds, params = {}) {
   const dynamicEffect = getDynamicEffect(engineId);
   if (dynamicEffect) {
     const rawFrame = dynamicEffect.render(engineId, width, height, Math.round(seconds * fps), fps, params);
+    if (dynamicEffect.keepsOriginalColors?.(engineId, params)) {
+      const frame = orientFrame(rawFrame, width, height, params.direction);
+      for (let offset = 0; offset < frame.length; offset += 3) {
+        frame.set(resolver.applyBrightness([frame[offset], frame[offset + 1], frame[offset + 2]]), offset);
+      }
+      return resolver.fillBackground(frame, width, height, seconds);
+    }
     return resolver.recolorFrame(orientFrame(rawFrame, width, height, params.direction), width, height, seconds);
   }
   if (['text', 'dual_text', 'vertical_text'].includes(engineId)) {
