@@ -448,6 +448,29 @@ class ToranRippleShowPluginTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.registry.generate("toran_ripple_show", 40, 25, 30, 1, {"scene": 6})
 
+    def test_single_scene_loops_every_fifth_of_the_show(self):
+        frames = self.registry.generate("toran_ripple_show", 40, 25, 30, 720, {"scene": 2})
+        np.testing.assert_array_equal(frames[0], frames[360])
+        self.assertFalse(np.array_equal(frames[0], frames[45]))
+
+    def test_catalog_exposes_param_ranges(self):
+        plugin = next(item for item in self.registry.catalog()["plugins"] if item["id"] == "toran_ripple_show")
+        self.assertEqual(plugin["ranges"]["scene"], [0, 5, 1])
+
+    def test_invalid_param_ranges_are_reported(self):
+        source = (
+            "PLUGIN_NAME = 'Bad ranges'\n"
+            "DEFAULT_PARAMS = {'level': 5}\n"
+            "PARAM_RANGES = {'level': (0, 3, 1)}\n"
+            "def generate(W, H, FPS, params):\n"
+            "    return []\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "bad.py").write_text(source)
+            catalog = PluginRegistry(Path(directory)).catalog()
+            self.assertEqual(catalog["plugins"], [])
+            self.assertIn("PARAM_RANGES", catalog["errors"][0]["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

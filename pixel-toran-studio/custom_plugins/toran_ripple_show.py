@@ -5,7 +5,8 @@ Scenes (equal length, each fades in/out so the full show loops seamlessly):
   2. Concentric Diamond Ripple   5. Diagonal Chevron Wave
   3. Multi-Point Water Drop Ripples
 
-Studio: loads automatically as a plugin (params: scene 0 = full show, 1-5 = single scene loop).
+Studio: loads automatically as a plugin. Params: scene 0 = full show, 1-5 = one scene looping
+(each loop lasts seconds / 5), seconds = full show length, fade = seconds of fade per scene.
 CLI (LedEdit / Wi-Fi controller export, 40x25 @ 30 FPS, 60 s):
   python toran_ripple_show.py -o toran_ripple_show.avi
 """
@@ -16,6 +17,7 @@ import numpy as np
 
 PLUGIN_NAME = "Toran Ripple Show (5 Scenes)"
 DEFAULT_PARAMS = {"scene": 0, "seconds": 60, "fade": 0.5}
+PARAM_RANGES = {"scene": (0, 5, 1), "seconds": (5, 120, 1), "fade": (0, 2, 0.1)}
 
 SCENE_NAMES = (
     "Multi-Band Sine Wave",
@@ -130,7 +132,8 @@ def render_show(W, H, FPS, seconds=60.0, scene=0, fade=0.5):
     total = max(1, round(seconds * FPS))
     if scene:
         render = SCENES[int(scene) - 1]
-        return [render(W, H, index / total, index) for index in range(total)]
+        loop = max(1, round(total / len(SCENES)))
+        return [render(W, H, index / loop, index) for index in range(loop)]
     frames = []
     bounds = [round(total * index / len(SCENES)) for index in range(len(SCENES) + 1)]
     for scene_index, render in enumerate(SCENES):
@@ -146,7 +149,7 @@ def render_show(W, H, FPS, seconds=60.0, scene=0, fade=0.5):
 
 
 def generate(W, H, FPS, params):
-    scene = int(params.get("scene", 0))
+    scene = round(params.get("scene", 0))
     if not 0 <= scene <= len(SCENES):
         raise ValueError(f"scene must be 0 (full show) or 1-{len(SCENES)}.")
     seconds = float(params.get("seconds", 60))
@@ -219,7 +222,7 @@ def main(argv=None):
     parser.add_argument("--fps", type=int, default=30)
     parser.add_argument("--seconds", type=float, default=60)
     parser.add_argument("--scene", type=int, default=0, choices=range(0, len(SCENES) + 1),
-                        help="0 = full 5-scene show, 1-5 = single scene loop")
+                        help="0 = full 5-scene show, 1-5 = one scene looping (each loop lasts seconds / 5)")
     parser.add_argument("--fade", type=float, default=0.5, help="fade in/out seconds per scene")
     parser.add_argument("--codec", choices=("raw", "mjpg"), default="raw",
                         help="raw = uncompressed, lossless crisp pixels (default); mjpg = smaller 4:4:4 JPEG frames")
