@@ -118,7 +118,7 @@ export class PluginManager {
     add.addEventListener('click', () => this.onAdd({
       pattern: `plugin:${plugin.id}`,
       name: plugin.name,
-      duration: plugin.params.seconds ?? 8,
+      duration: values.seconds ?? 8,
       options: { params: { ...values } },
     }));
     card.append(heading, params, add);
