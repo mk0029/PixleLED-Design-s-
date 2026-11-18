@@ -426,6 +426,21 @@ class PluginUploadTests(unittest.TestCase):
             self.assertFalse((Path(directory) / ".sample.upload").exists())
 
 
+class ToranVerticalLineEffectTests(unittest.TestCase):
+    def test_ripple_scenes_are_vertical_line_effects_with_original_colors(self):
+        names = {preset["base_name"] for preset in SCENE_PRESETS.values()
+                 if preset["family"] == "Vertical Line & Curtain Flows"}
+        for name in ("Multi-Band Sine Wave", "Concentric Diamond Ripple", "Multi-Point Water Drop Ripples",
+                     "Top-Border Rectangular Pulse", "Diagonal Chevron Wave"):
+            self.assertIn(name, names)
+        frames = generate_frames("top-border-rectangular-pulse--original-colors", 40, 25, 30, 30)
+        self.assertTrue(all(frame.shape == (25, 40, 3) for frame in frames))
+        np.testing.assert_array_equal(frames[15][0], np.tile((255, 0, 0), (40, 1)))
+        self.assertFalse(np.array_equal(frames[0], frames[29]))
+        mirrored = generate_frames("diagonal-chevron-wave--mirror-symmetry", 40, 25, 30, 1)[0]
+        np.testing.assert_array_equal(mirrored, mirrored[:, ::-1])
+
+
 class ToranRippleShowPluginTests(unittest.TestCase):
     def setUp(self):
         self.registry = PluginRegistry(Path(__file__).resolve().parent.parent / "custom_plugins")

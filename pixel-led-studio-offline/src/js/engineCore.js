@@ -1,5 +1,6 @@
 import { FacadeEffects } from './facadeEffects.js';
 import { LargeScaleEffects } from './largeScaleEffects.js';
+import { TORAN_LOOP_SECONDS, ToranScenes } from './toranScenes.js';
 import { createColorResolver } from './colorResolver.js';
 import { frameIndexForDirection, motionTime, orientFrame } from './direction.js';
 
@@ -15,6 +16,7 @@ const categories = [
       ['Odd/Even Alternating Up-Down Zipper', 'zipper'],
       ['Center-Out Vertical Split', 'split'],
       ['Digital Meteor Rain', 'meteor'],
+      ...ToranScenes.engines,
     ],
   },
   { name: 'Facade & Curtain', engines: [] },
@@ -445,6 +447,12 @@ function renderEngine(engineId, width, height, fps, seconds, params = {}) {
   if (['mandala', 'diya', 'lotus', 'rangoli'].includes(engineId)) {
     const frame = orientFrame(renderFestiveMotif(engineId, width, height, seconds, params, resolver), width, height, params.direction);
     return resolver.fillBackground(frame, width, height, seconds);
+  }
+  if (ToranScenes.isScene(engineId)) {
+    const speed = Math.max(.1, Math.min(5, Number(params.speed || 1)));
+    const phase = ((motionTime(seconds, speed, params.direction) / TORAN_LOOP_SECONDS) % 1 + 1) % 1;
+    const frame = ToranScenes.render(engineId, width, height, phase, Math.round(seconds * fps), resolver.applyBrightness);
+    return resolver.fillBackground(orientFrame(frame, width, height, params.direction), width, height, seconds);
   }
   const dynamicEffect = getDynamicEffect(engineId);
   if (dynamicEffect) {
