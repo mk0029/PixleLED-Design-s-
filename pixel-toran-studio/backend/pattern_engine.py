@@ -12,10 +12,12 @@ import re
 import numpy as np
 
 from effect_presets import SCENE_PRESETS
+from toran_scenes import SCENE_KINDS as TORAN_SCENE_KINDS
 
 DEFAULT_WIDTH = 30
 DEFAULT_HEIGHT = 20
 DEFAULT_FPS = 20
+TORAN_SCENE_LOOP_SECONDS = 12
 
 PATTERNS = {key: str(preset["name"]) for key, preset in SCENE_PRESETS.items()}
 PATTERNS.update({"text": "5×7 Bitmap Scrolling Text", "custom": "Pixel Draw", "math": "Math Lab"})
@@ -209,6 +211,22 @@ def _text_frame(options: dict[str, object], width: int, height: int, index: int,
     return frame
 
 
+def _render_toran_scene(preset: dict[str, object], width: int, height: int, fps: int, frame_count: int,
+                        options: dict[str, object]) -> list[np.ndarray]:
+    render = TORAN_SCENE_KINDS[str(preset["kind"])]
+    direction = -1 if preset["modifier"] == "reverse-flow" else 1
+    direction *= -1 if options.get("direction") == "reverse" else 1
+    speed = max(0.01, min(8.0, float(options.get("speed", 1.0))))
+    loop_frames = TORAN_SCENE_LOOP_SECONDS * fps / speed
+    frames = []
+    for frame_index in range(frame_count):
+        frame = render(width, height, (direction * frame_index / loop_frames) % 1.0, frame_index)
+        if preset["modifier"] == "mirror-symmetry":
+            frame = np.maximum(frame, frame[:, ::-1])
+        frames.append(frame)
+    return frames
+
+
 def _render_effect(preset: dict[str, object], width: int, height: int, frame_count: int,
                    options: dict[str, object]) -> list[np.ndarray]:
     kind = str(preset["kind"])
@@ -376,6 +394,8 @@ def generate_frames(
         if str(preset["kind"]) == "text":
             speed = float(options.get("speed", 1))
             return [_text_frame(options, width, height, index, speed) for index in range(frame_count)]
+        if str(preset["kind"]) in TORAN_SCENE_KINDS:
+            return _render_toran_scene(preset, width, height, fps, frame_count, options)
         return _render_effect(preset, width, height, frame_count, options)
     if pattern == "text":
         return [_text_frame(options, width, height, index, float(options.get("speed", 1))) for index in range(frame_count)]

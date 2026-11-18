@@ -92,17 +92,20 @@ export class PluginManager {
       control.className = 'plugin-param';
       const label = document.createElement('span');
       label.textContent = key;
+      const [min, max, step] = plugin.ranges?.[key]
+        ?? [value < 0 ? -5 : 0, Math.max(3, Math.abs(value) * 3), 0.01];
+      const decimals = Number.isInteger(step) ? 0 : 2;
       const output = document.createElement('output');
-      output.textContent = Number(value).toFixed(2);
+      output.textContent = Number(value).toFixed(decimals);
       const range = document.createElement('input');
       range.type = 'range';
-      range.min = String(value < 0 ? -5 : 0);
-      range.max = String(Math.max(3, Math.abs(value) * 3));
-      range.step = '0.01';
+      range.min = String(min);
+      range.max = String(max);
+      range.step = String(step);
       range.value = String(value);
       range.addEventListener('input', () => {
         values[key] = Number(range.value);
-        output.textContent = Number(range.value).toFixed(2);
+        output.textContent = Number(range.value).toFixed(decimals);
       });
       control.append(label, output, range);
       params.append(control);
@@ -115,7 +118,7 @@ export class PluginManager {
     add.addEventListener('click', () => this.onAdd({
       pattern: `plugin:${plugin.id}`,
       name: plugin.name,
-      duration: 8,
+      duration: values.seconds ?? 8,
       options: { params: { ...values } },
     }));
     card.append(heading, params, add);
