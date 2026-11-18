@@ -441,6 +441,23 @@ class ToranVerticalLineEffectTests(unittest.TestCase):
         np.testing.assert_array_equal(mirrored, mirrored[:, ::-1])
 
 
+class VerticalAnimationEffectTests(unittest.TestCase):
+    def test_twelve_vertical_animations_render_full_grid_frames_in_vertical_family(self):
+        presets = {preset["base_name"]: preset_id for preset_id, preset in SCENE_PRESETS.items()
+                   if preset["family"] == "Vertical Line & Curtain Flows" and preset["kind"].startswith("vline_")
+                   and preset["modifier"] == "original-colors"}
+        self.assertEqual(len(presets), 12)
+        for name, preset_id in presets.items():
+            frames = generate_frames(preset_id, 40, 25, 30, 30)
+            self.assertTrue(all(frame.shape == (25, 40, 3) and frame.dtype == np.uint8 for frame in frames), name)
+            self.assertTrue(np.any(frames[15]), name)
+            self.assertFalse(np.array_equal(frames[0], frames[29]), name)
+
+    def test_peak_hold_equalizer_draws_white_peaks_above_bars(self):
+        frame = generate_frames("peak-hold-equalizer-bars--original-colors", 40, 25, 30, 20)[-1]
+        self.assertTrue(np.any(np.all(frame == 255, axis=-1)))
+
+
 class ToranRippleShowPluginTests(unittest.TestCase):
     def setUp(self):
         self.registry = PluginRegistry(Path(__file__).resolve().parent.parent / "custom_plugins")

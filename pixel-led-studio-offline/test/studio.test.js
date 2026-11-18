@@ -19,11 +19,11 @@ test('Math Lab library provides 512 unique, validated logics across eight famili
 });
 
 test('engine catalog contains one preset per engine in six clean categories', () => {
-  assert.equal(EngineCore.presets.length, 42);
+  assert.equal(EngineCore.presets.length, 54);
   assert.equal(EngineCore.categories.length, 6);
   assert.equal(new Set(EngineCore.presets.map((preset) => preset.category)).size, 6);
-  assert.equal(new Set(EngineCore.presets.map((preset) => preset.id)).size, 42);
-  assert.equal(new Set(EngineCore.presets.map((preset) => preset.name)).size, 42);
+  assert.equal(new Set(EngineCore.presets.map((preset) => preset.id)).size, 54);
+  assert.equal(new Set(EngineCore.presets.map((preset) => preset.name)).size, 54);
   assert.deepEqual(EngineCore.categories.map((category) => category.name), [
     'Vertical Lines', 'Facade & Curtain', 'DJ & Club', 'Geometric', 'Festive', 'Typography',
   ]);
@@ -76,6 +76,22 @@ test('Toran ripple scenes are Vertical Lines engines with fixed colors and a red
   }
   const [border] = EngineCore.generateFrames({ engineId: 'toran_top_border_pulse', params: {} }, 40, 25, 1, 30);
   for (let x = 0; x < 40; x += 1) assert.deepEqual([...border.slice(x * 3, x * 3 + 3)], [255, 0, 0]);
+});
+
+test('twelve vertical animations render animated full-grid frames in Vertical Lines', () => {
+  const names = ['Matrix Rain', 'Liquid Fire', 'Peak-Hold Equalizer Bars', 'Waterfall & Splash',
+    'Cyan-Amber DNA Double Helix', 'Comet Curtain Sweep', 'Venetian Shutter Weave', 'Plucked String Wave',
+    'Prismatic Plasma', 'Polar Spiral Vortex', '4-Way Kaleidoscope', 'Voronoi Water Caustics'];
+  const vertical = EngineCore.categories.find((category) => category.name === 'Vertical Lines');
+  for (const name of names) assert.ok(vertical.engines.some(([engineName]) => engineName === name), name);
+  const presets = EngineCore.presets.filter((item) => item.kind.startsWith('vline_'));
+  assert.equal(presets.length, 12);
+  for (const preset of presets) {
+    const frames = EngineCore.generateFrames({ engineId: preset.engineId, params: {} }, 40, 25, 30, 30);
+    assert.ok(frames.every((frame) => frame.length === 40 * 25 * 3), preset.name);
+    assert.ok(frames[15].some((channel) => channel > 0), `${preset.name} lights pixels`);
+    assert.notDeepEqual(frames[0], frames[29], `${preset.name} animates`);
+  }
 });
 
 test('single-line scan presets move down the matrix and return packed RGB frames', () => {

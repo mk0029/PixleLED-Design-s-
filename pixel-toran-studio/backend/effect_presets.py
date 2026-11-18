@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from vertical_animations import ANIMATIONS as VERTICAL_ANIMATIONS
+
 EFFECTS = (
     ("All-Lines Top-to-Bottom Comet Bounce", "Vertical Line & Curtain Flows", "comet"),
     ("Sequential Line-by-Line Palette Waterfall", "Vertical Line & Curtain Flows", "waterfall"),
@@ -17,6 +19,7 @@ EFFECTS = (
     ("Multi-Point Water Drop Ripples", "Vertical Line & Curtain Flows", "toran_water_drops"),
     ("Top-Border Rectangular Pulse", "Vertical Line & Curtain Flows", "toran_top_border_pulse"),
     ("Diagonal Chevron Wave", "Vertical Line & Curtain Flows", "toran_chevron"),
+    *((name, "Vertical Line & Curtain Flows", kind) for kind, (name, _) in VERTICAL_ANIMATIONS.items()),
     ("Multi-Band Spectrum Equalizer with Gravity Peak-Hold", "DJ, Club & Audio-Kinetic", "equalizer"),
     ("Dual Bass VU-Meter", "DJ, Club & Audio-Kinetic", "vu"),
     ("Rotating Laser Beams", "DJ, Club & Audio-Kinetic", "laser"),
@@ -55,9 +58,10 @@ MODIFIERS = (
     ("reverse-flow", "Reverse Flow", "reverse", 0.0),
 )
 
-# Toran ripple scenes keep their designed colors, so palette modifiers are replaced by one original-colors variant.
+# Toran ripple scenes and vertical animations keep their designed colors, so palette modifiers are replaced
+# by one original-colors variant.
 FIXED_COLOR_KINDS = {"toran_sine_bands", "toran_diamond_ripple", "toran_water_drops", "toran_top_border_pulse",
-                     "toran_chevron"}
+                     "toran_chevron", *VERTICAL_ANIMATIONS}
 FIXED_COLOR_MODIFIERS = (
     ("original-colors", "Original Colors", "original", 0.0),
     *(modifier for modifier in MODIFIERS if modifier[2] in {"mirror", "reverse"}),
