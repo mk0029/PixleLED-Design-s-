@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090c10">
+  <meta name="description" content="Offline pixel LED animation studio with local AVI and ZIP export.">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./css/style.css">
+  <title>Pixel LED Studio</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Pixel LED Studio"><span class="brand-mark">▦</span><span>PIXEL<span class="brand-accent">LED</span><small>OFFLINE STUDIO</small></span></a>
+    <div class="top-controls">
+      <label class="compact-field project-field">PROJECT <input id="projectName" maxlength="64" value="New LED Show"></label>
+      <label class="compact-field">MATRIX
+        <select id="matrixPreset" aria-label="Matrix preset">
+          <option value="30x20" selected>30 × 20</option><option value="25x40">25 × 40</option><option value="32x16">32 × 16</option><option value="50x50">50 × 50</option><option value="custom">Custom</option>
+        </select>
+      </label>
+      <label class="compact-field custom-size" id="customSize" hidden>W <input id="matrixWidth" type="number" min="1" max="120" value="30"> H <input id="matrixHeight" type="number" min="1" max="80" value="20"></label>
+      <label class="compact-field">FPS <select id="fps"><option>15</option><option selected>20</option><option>25</option><option>30</option><option>60</option></select></label>
+      <button class="button secondary" id="saveProject">Save project</button>
+      <button class="button secondary" id="loadProject">Load project</button><input id="projectFile" type="file" accept=".json,application/json" hidden>
+      <button class="button secondary" id="fullscreen">Whole screen <kbd>F</kbd></button>
+      <button class="button primary" id="export">Export AVI + ZIP</button>
+    </div>
+  </header>
+  <main class="studio">
+    <aside class="panel library-panel">
+      <div class="panel-title"><div><small>01 / LIBRARY</small><h1>Light engines</h1></div><span class="count" id="presetCount">37</span></div>
+      <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Find an effect…" autocomplete="off"></label>
+      <nav class="categories" id="categories" aria-label="Effect categories"></nav>
+      <div class="preset-list" id="presetList"></div>
+      <section class="plugin-drop" id="pluginDrop">
+        <div class="plugin-icon">↥</div><strong>Local Python plugin</strong><span>Drop a trusted .py file here</span>
+        <input id="pluginInput" type="file" accept=".py,text/x-python" aria-label="Upload Python plugin">
+        <small>Plugins are not executed in this offline edition.</small>
+      </section>
+    </aside>
+    <section class="viewport panel" id="viewport">
+      <div class="viewport-head"><div><small>02 / MATRIX VIEWPORT</small><strong id="resolution">30 × 20 · 600 PIXELS</strong></div><span class="status"><i></i> LOCAL</span></div>
+      <div class="sim-wrap" id="simWrap"><canvas id="ledCanvas" aria-label="LED matrix preview"></canvas></div>
+      <div class="player">
+        <button class="play" id="play" aria-label="Pause">Ⅱ</button>
+        <span class="time" id="frameLabel">FRAME 01 / 60</span>
+        <input id="scrubber" type="range" min="0" max="59" value="0" aria-label="Animation frame">
+        <label class="zoom">ZOOM <input id="zoom" type="range" min="50" max="160" value="100"></label>
+      </div>
+      <div class="viewport-foot">
+        <div class="wiring"><span>WIRING</span><button class="wire active" data-wire="z">Z-TYPE</button><button class="wire" data-wire="s">S-TYPE</button><label><input id="wireOverlay" type="checkbox" checked> Path</label></div>
+        <span class="key-hint">HOVER A PIXEL FOR INDEX</span>
+      </div>
+      <div class="toolbar">
+        <button class="button secondary" id="addScene">＋ Add to timeline</button>
+        <button class="button secondary" id="newDrawing">Pixel draw</button>
+        <span class="toolbar-spacer"></span><span id="activeEffect">No effect selected</span>
+      </div>
+    </section>
+    <aside class="panel inspector">
+      <div class="panel-title"><div><small>03 / INSPECTOR</small><h2>Live controls</h2></div></div>
+      <div class="tab-row"><button class="tab active" data-pane="parameters">Parameters</button><button class="tab" data-pane="math">Math lab</button><button class="tab" data-pane="draw">Pixel draw</button></div>
+      <div class="inspector-content">
+        <section class="inspector-pane active" id="parameters">
+          <section class="matrix-summary" aria-label="Matrix pixel count">
+            <h3>Matrix &amp; Pixel Count</h3>
+            <div><span>Resolution</span><output id="matrixDimensions">30 × 20</output></div>
+            <div><span>Total pixels</span><output id="pixelCount">600</output></div>
+          </section>
+        <section class="color-controller" aria-labelledby="colorControllerTitle">
+          <h3 id="colorControllerTitle">Color &amp; Auto-Cycle</h3>
+          <label class="compact-field">Color mode
+            <select id="colorMode">
+              <option value="preset">Preset Palette</option><option value="custom">Custom Multi-Color</option>
+              <option value="solid">Single Solid Color</option><option value="rainbow">Auto Rainbow Cycle</option>
+              <option value="morph">Auto Palette Morph</option>
+            </select>
+          </label>
+          <label class="compact-field" id="presetPaletteField">Preset palette
+            <select id="presetPalette">
+              <option value="cyber">Cyber Blue &amp; Amber</option><option value="diwali">Diwali Vivid</option>
+              <option value="wedding">Wedding Gold &amp; Crimson</option><option value="tricolor">Indian Tricolor</option>
+              <option value="neon">Neon Club</option><option value="ocean">Ocean Aqua</option>
+              <option value="fire">Fire Blaze</option>
+            </select>
+          </label>
+          <label class="compact-field" id="morphSourceField" hidden>Morph colors from
+            <select id="morphSource"><option value="preset">Preset Palette</option><option value="custom">Custom Colors</option></select>
+          </label>
+          <div class="custom-colors" id="customColorControls" hidden>
+            <label>Primary<input id="customColorPrimary" type="color" value="#00a8ff"></label>
+            <label>Secondary<input id="customColorSecondary" type="color" value="#ffaa00"></label>
+            <label>Accent 1<input id="customColorAccent1" type="color" value="#f34f9a"></label>
+            <label>Accent 2<input id="customColorAccent2" type="color" value="#45e0c3"></label>
+            <button class="button secondary" id="randomizeColors" type="button">Randomize Colors</button>
+          </div>
+          <label class="compact-field" id="solidColorField" hidden>Solid color<input id="solidColor" type="color" value="#00a8ff"></label>
+          <label class="range-control"><span>Auto-color speed <output id="autoColorSpeedOut">1.0×</output></span><input id="autoColorSpeed" type="range" min="0.2" max="5" step="0.1" value="1"></label>
+          <label class="range-control"><span>Hue shift <output id="hueShiftOut">0°</output></span><input id="hueShift" type="range" min="0" max="360" step="1" value="0"></label>
+          <label class="check-row"><input id="whiteAccent" type="checkbox" checked> White outline / tip sparkle</label>
+        </section>
+        <section class="background-controller" aria-label="Background animation">
+          <h3>Background Animation</h3>
+          <label class="compact-field">Background mode
+            <select id="backgroundMode">
+              <option value="off">Off · black</option>
+              <option value="solid">Solid color</option>
+              <option value="palette">Auto palette switch</option>
+              <option value="rainbow">Auto rainbow cycle</option>
+            </select>
+          </label>
+          <label class="compact-field" id="backgroundColorField" hidden>Background color
+            <input id="backgroundColor" type="color" value="#101820">
+          </label>
+          <label class="range-control" id="backgroundAutoSpeedField" hidden>
+            <span>Background cycle speed <output id="backgroundAutoSpeedOut">1.0×</output></span>
+            <input id="backgroundAutoSpeed" type="range" min="0.2" max="5" step="0.1" value="1">
+          </label>
+          <label class="range-control" id="backgroundBrightnessField" hidden>
+            <span>Background brightness <output id="backgroundBrightnessOut">22%</output></span>
+            <input id="backgroundBrightness" type="range" min="0.05" max="1" step="0.01" value="0.22">
+          </label>
+        </section>
+        <section class="playback-controller" id="playbackParameters" aria-label="Playback and intensity">
+          <h3>Playback &amp; Intensity</h3>
+          <label class="range-control"><span>Brightness <output id="brightnessOut">100%</output></span><input id="brightness" type="range" min="0" max="1" step="0.01" value="1"></label>
+          <label class="range-control"><span>Speed <output id="speedOut">1.0×</output></span><input id="speed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
+          <label class="range-control"><span>Pattern density <output id="densityOut">1.0</output></span><input id="density" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+          <label class="compact-field">Direction<select id="direction">
+            <option value="forward">Forward</option><option value="reverse">Reverse</option>
+            <option value="left">Left</option><option value="right">Right</option>
+            <option value="top-right">Top Right</option><option value="bottom-right">Bottom Right</option>
+            <option value="top-left">Top Left</option><option value="bottom-left">Bottom Left</option>
+            <option value="bounce">Bounce</option>
+          </select></label>
+          <label class="compact-field duration-field">Animation duration (seconds)<input id="animationDuration" type="number" min="0.1" max="120" step="any" value="3"></label>
+          <label class="compact-field duration-field">Total frames<input id="animationFrames" type="number" min="2" max="18000" step="1" value="60"></label>
+          <small class="frames-note">Frame count drives export length at the selected FPS. Preview is capped at 600 frames.</small>
+        </section>
+          <div id="standardParameters">
+            <section class="text-parameters" id="textParameters" hidden>
+              <h3>Typography Controls</h3>
+              <label class="compact-field" id="bannerTextField">Scrolling text<input id="bannerText" maxlength="64" value="PIXEL LED"></label>
+              <label class="compact-field" id="dualTextLeftField" hidden>Text moving left<input id="dualTextLeft" maxlength="64" value="LEFT"></label>
+              <label class="compact-field" id="dualTextRightField" hidden>Text moving right<input id="dualTextRight" maxlength="64" value="RIGHT"></label>
+              <label class="compact-field">Text background
+                <select id="textBackgroundMode">
+                  <option value="transparent">Transparent</option>
+                  <option value="solid">Solid color</option>
+                  <option value="palette">Palette cycle</option>
+                  <option value="rainbow">Rainbow cycle</option>
+                </select>
+              </label>
+              <label class="compact-field" id="textBackgroundColorField" hidden>Background color<input id="textBackgroundColor" type="color" value="#101820"></label>
+              <label class="range-control"><span>Text background speed <output id="textBackgroundSpeedOut">1.0×</output></span><input id="textBackgroundSpeed" type="range" min="0.2" max="5" step="0.1" value="1"></label>
+              <label class="range-control"><span>Text background brightness <output id="textBackgroundBrightnessOut">22%</output></span><input id="textBackgroundBrightness" type="range" min="0.05" max="1" step="0.01" value="0.22"></label>
+              <label class="check-row"><input id="backgroundChase" type="checkbox" checked> Animated text chase</label>
+              <label class="check-row"><input id="doubleHeight" type="checkbox"> Double-height bitmap font</label>
+            </section>
+          </div>
+          <div class="dynamic-parameters" id="dynamicParameters" hidden></div>
+        </section>
+      <section class="inspector-pane" id="math" hidden>
+        <section class="math-controls" aria-label="Math Lab parameters">
+          <h3>Math Lab Parameters</h3>
+          <label class="range-control"><span>Speed <output id="mathSpeedOut">1.0×</output></span><input id="mathSpeed" type="range" min="0.1" max="3" step="0.1" value="1"></label>
+          <label class="range-control"><span>Density <output id="mathDensityOut">1.00</output></span><input id="mathDensity" type="range" min="0.3" max="3" step="0.1" value="1"></label>
+          <label class="range-control"><span>Brightness <output id="mathBrightnessOut">100%</output></span><input id="mathBrightness" type="range" min="0" max="1" step="0.01" value="1"></label>
+          <label class="compact-field">Direction<select id="mathDirection">
+            <option value="forward">Forward</option><option value="reverse">Reverse</option>
+            <option value="left">Left</option><option value="right">Right</option>
+            <option value="top-right">Top Right</option><option value="bottom-right">Bottom Right</option>
+            <option value="top-left">Top Left</option><option value="bottom-left">Bottom Left</option>
+            <option value="bounce">Bounce</option>
+          </select></label>
+          <label class="compact-field">Duration (seconds)<input id="mathDuration" type="number" min="0.1" max="120" step="any" value="3"></label>
+          <label class="compact-field">Total frames<input id="mathFrames" type="number" min="1" max="18000" step="1" value="60"></label>
+        </section>
+        <section class="math-logic-library" aria-label="Math logic library">
+          <h3>Pattern Family <span>512 patterns</span></h3>
+          <label class="compact-field">Choose a family<select id="mathCategory"></select></label>
+          <div class="math-logic-actions">
+            <button class="button secondary" id="switchMathPattern" type="button" aria-label="Switch to the next animation in this family">Switch</button>
+          </div>
+        </section>
+        <p class="helper">Safe per-pixel formulas. Variables: x, y, t, W, H. Functions: sin, cos, tan, hypot, abs, min, max, pi, rand(x,y,t).</p>
+        <label class="formula">RED <input id="formulaR" value="127 + 127 * sin(x / W * 6.28 + t * 0.12)"></label>
+        <label class="formula">GREEN <input id="formulaG" value="127 + 127 * sin(y / H * 6.28 + t * 0.12 + 2.1)"></label>
+        <label class="formula">BLUE <input id="formulaB" value="127 + 127 * sin((x + y) / (W + H) * 6.28 + t * 0.12 + 4.2)"></label>
+        <button class="button primary full" id="useMath">Use Math Lab</button>
+      </section>
+      <section class="inspector-pane" id="draw" hidden>
+        <p class="helper">Paint pixels with a click or drag. Add the drawing as a timeline scene.</p>
+        <label class="compact-field">Brush color<input id="brushColor" type="color" value="#00a8ff"></label>
+        <div class="draw-board"><canvas id="paintCanvas"></canvas></div>
+        <div class="inline-actions"><button class="button secondary" id="clearDrawing">Clear</button><button class="button primary" id="addDrawing">Add drawing</button></div>
+      </section>
+      <p class="local-note">No accounts, analytics, CDNs, or server APIs. Projects and settings stay on this device.</p>
+      </div>
+    </aside>
+    <section class="timeline panel" id="timeline">
+      <div class="timeline-head"><div><small>04 / SHOW SEQUENCER</small><h2>Timeline <span id="sceneCount">0 scenes</span></h2></div><div class="timeline-actions"><span id="runtime">00:00</span><button class="button secondary" id="clearTimeline">Clear show</button><button class="button primary" id="renderShow">Render full show · AVI + ZIP</button></div></div>
+      <div class="timeline-track" id="timelineTrack"><div class="timeline-empty">Choose an effect and add it to your show.</div></div>
+      <p class="compat-note">AVI uses uncompressed 24-bit RGB. LEDEdit/controller codec and import compatibility must be confirmed on the target hardware before production use.</p>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

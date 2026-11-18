@@ -1,0 +1,10 @@
+{
+  "name": "Pixel LED Studio Offline",
+  "short_name": "Pixel LED",
+  "description": "Offline pixel LED animation designer and AVI/ZIP exporter.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090c10",
+  "theme_color": "#090c10"
+}

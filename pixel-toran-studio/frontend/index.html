@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <title>Pixel Toran Studio</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Pixel Toran Studio home">
+        <span class="brand-mark">✳</span>
+        <span><strong>pixel<span>toran</span></strong><small>LED STUDIO</small></span>
+      </a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item active" href="#studio"><span>◫</span> Studio <kbd>01</kbd></a>
+      <a class="nav-item" href="#library"><span>▦</span> Scene library</a>
+      <a class="nav-item" href="#playlist"><span>☷</span> Playlist</a>
+      <div class="sidebar-bottom">
+        <div class="controller-card">
+          <div class="controller-head">EXPORT PROFILE · UNVERIFIED</div>
+          <strong>T1000 / 2014</strong>
+          <small>SWF Flash animation · device format not verified</small>
+        </div>
+        <div class="profile"><div class="avatar">T</div><span><strong>Torhan Studio</strong><small>Local workspace</small></span><span class="dots">•••</span></div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="studio">
+      <header class="topbar">
+        <div><p class="eyebrow">PIXEL LED DESIGNER <span class="crumb">/</span> NEW PROJECT</p><h1>Build your toran<span class="title-dot">.</span></h1></div>
+        <div class="top-actions"><span class="save-state"><span class="live-dot"></span> Local workspace</span><button class="button button-primary top-export" id="exportTop">↥ <span>Export SWF</span></button></div>
+      </header>
+
+      <section class="config-card card">
+        <div class="card-heading"><div><span class="section-kicker">01 / SETUP</span><h2>Grid configuration</h2></div><span class="config-note" id="gridSummary">30 × 8 · 240 RGB pixels</span></div>
+        <div class="config-fields">
+          <label>Columns <span class="field-unit">W</span><input id="gridWidth" type="number" min="1" max="120" value="30"></label>
+          <span class="dimension-cross">×</span>
+          <label>Rows <span class="field-unit">H</span><input id="gridHeight" type="number" min="1" max="80" value="8"></label>
+          <span class="config-divider"></span>
+          <label>Playback speed <span class="field-unit">FPS</span><select id="gridFps"><option value="20" selected>20 fps</option><option value="25">25 fps</option><option value="30">30 fps</option><option value="15">15 fps</option></select></label>
+          <div class="wiring-setting"><span class="field-title">Wiring direction</span><div class="segmented"><button class="segment active" data-wiring="z">Z-Type</button><button class="segment" data-wiring="s">S-Type</button></div></div>
+          <div class="wire-preview"><canvas id="wiringCanvas" width="102" height="42" aria-label="LED wiring layout preview"></canvas></div>
+        </div>
+      </section>
+
+      <nav class="studio-tabs" role="tablist" aria-label="Studio workspace">
+        <button class="studio-tab active" id="presetTabButton" type="button" role="tab" aria-selected="true" aria-controls="presetPanel" data-tab="presetPanel"><span>01</span> Presets</button>
+        <button class="studio-tab" type="button" role="tab" aria-selected="false" aria-controls="mathPanel" data-tab="mathPanel"><span>02</span> Math Lab</button>
+        <button class="studio-tab" type="button" role="tab" aria-selected="false" aria-controls="drawPluginsPanel" data-tab="drawPluginsPanel"><span>03</span> Pixel Draw &amp; Plugins</button>
+      </nav>
+
+      <div class="studio-grid">
+        <div class="tab-panels">
+          <section class="tab-panel active" id="presetPanel" role="tabpanel" aria-labelledby="presetTabButton">
+            <div class="left-column">
+              <section class="card library-card" id="library">
+                <div class="card-heading"><div><span class="section-kicker">01 / CREATE</span><h2>Scene library</h2></div><span class="count-pill" id="sceneCount">LOADING SCENES</span></div>
+                <div class="scene-library-filters">
+                  <label class="scene-family-filter" for="sceneFamilyFilter">Animation family<select id="sceneFamilyFilter"><option value="all">All families</option></select></label>
+                  <input id="sceneSearch" type="search" placeholder="Search 400+ animations…" aria-label="Search scene presets">
+                </div>
+                <div class="collection-export">
+                  <span id="collectionResolution">30 × 8 · 12-FRAME EDITABLE PACKS</span>
+                  <button class="button button-secondary compact" id="exportAnimalsPack" type="button">Export Animals</button>
+                  <button class="button button-secondary compact" id="exportBhangraPack" type="button">Export Punjabi Bhangra</button>
+                </div>
+                <div class="scene-grid" id="sceneLibrary"></div>
+                <div class="preset-pagination scene-pagination"><span id="scenePageLabel">1 / 18</span><button class="item-action" id="scenePrev" aria-label="Previous scenes">←</button><button class="item-action" id="sceneNext" aria-label="Next scenes">→</button></div>
+                <div class="text-controls">
+                  <div class="subheading"><div><span class="section-kicker">PERSONALIZE</span><h3>Scrolling message</h3></div><span class="tiny-note">5 × 7 BITMAP FONT</span></div>
+                  <div class="text-row">
+                    <input id="messageText" type="text" maxlength="48" value="JUST MARRIED" aria-label="Scrolling text">
+                    <label class="color-control" title="Message color"><input id="messageColor" type="color" value="#00a8ff"><span class="color-dot"></span> Color</label>
+                    <label class="speed-control">Speed <select id="messageSpeed"><option value="1">Slow</option><option value="2" selected>Normal</option><option value="3">Fast</option></select></label>
+                    <button class="button button-secondary" id="addText">＋ Add text</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card playlist-card" id="playlist">
+                <div class="card-heading"><div><span class="section-kicker">02 / SEQUENCE</span><h2>Your playlist <span class="playlist-total" id="playlistTotal">0:00</span></h2></div><button class="text-button" id="clearPlaylist">Clear all</button></div>
+                <div class="playlist-empty" id="playlistEmpty"><span class="empty-icon">＋</span><span>Your show starts here</span><small>Add scenes from the library above</small></div>
+                <div class="playlist-list" id="playlistList"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="tab-panel" id="mathPanel" role="tabpanel" aria-label="Math pattern lab" hidden>
+            <section class="card math-presets-card">
+              <div class="card-heading"><div><span class="section-kicker">FORMULA LIBRARY</span><h2>Pattern &amp; color presets</h2></div><span class="count-pill" id="mathPresetCount">648 PRESETS · 648 EFFECTS</span></div>
+              <div class="preset-filters">
+                <input id="mathPresetSearch" type="search" placeholder="Search effects and formulas…" aria-label="Search math presets">
+                <select id="mathPresetCategory" aria-label="Filter math preset category"><option value="all">All pattern families</option></select>
+              </div>
+              <div class="math-preset-list" id="mathPresetList"></div>
+              <div class="preset-pagination"><span id="mathPresetPageLabel">1 / 41 · 648 presets · 648 effects</span><button class="item-action" id="mathPresetPrev" aria-label="Previous presets">←</button><button class="item-action" id="mathPresetNext" aria-label="Next presets">→</button></div>
+            </section>
+            <section class="card math-card">
+              <div class="card-heading"><div><span class="section-kicker">PROCEDURAL ANIMATION</span><h2>Math pattern lab</h2></div><span class="count-pill">SAFE EXPRESSION ENGINE</span></div>
+              <label class="formula-label" for="mathFormula">Pixel formula <span>One value per pixel</span></label>
+              <input id="mathFormula" class="formula-input" type="text" spellcheck="false" value="sin(x * density + t * speed) + cos(y * density - t * speed)" autocomplete="off">
+              <div class="formula-help">
+                <span>Variables</span><code>x · y · t · W · H · v (shape value)</code>
+                <span>Functions</span><code>sin · cos · tan · sqrt · hypot · abs · rand()</code>
+                <span>Operators</span><code>+ − × ÷ · power · modulo · parentheses</code>
+              </div>
+              <div class="parameter-header"><span class="section-kicker">LIVE PARAMETERS</span><span class="tiny-note">PARAMETER NAMES IN YOUR FORMULA BECOME SLIDERS</span></div>
+              <div class="parameter-grid" id="mathParamControls"></div>
+              <div class="color-formula-heading"><div><span class="section-kicker">COLOR SOURCE</span><span class="tiny-note">PICK A CUSTOM COLOR OR DRIVE RGB WITH MATH</span></div>
+                <div class="color-source-controls">
+                  <label class="color-mode-control">Source <select id="mathColorMode"><option value="custom">Custom color</option><option value="formula" selected>Math RGB formulas</option><option value="random">Random color per frame</option><option value="rainbow">Math rainbow spectrum</option></select></label>
+                  <label class="color-mode-control" id="mathPaletteControl" hidden>Palette <select id="mathColorPalette"></select></label>
+                </div>
+              </div>
+              <label class="shape-mask-control"><input id="mathShapeMask" type="checkbox"> Use shape formula as brightness mask <span>When off, RGB colors are not dimmed by the shape value.</span></label>
+              <div class="color-formulas" id="mathColorFormulas">
+                <label>R <input id="mathRedFormula" type="text" spellcheck="false" value="127.5 + 127.5 * sin(v + t * colorSpeed)"></label>
+                <label>G <input id="mathGreenFormula" type="text" spellcheck="false" value="127.5 + 127.5 * sin(v + t * colorSpeed + 2.094)"></label>
+                <label>B <input id="mathBlueFormula" type="text" spellcheck="false" value="127.5 + 127.5 * sin(v + t * colorSpeed + 4.188)"></label>
+              </div>
+              <div class="math-actions">
+                <label class="color-control" id="mathCustomColorControl" hidden><input id="mathColor" type="color" value="#ffffff"><span class="color-dot"></span> Custom color</label>
+                <button class="button button-secondary" id="randomizeMath">⤨ Randomize</button>
+                <button class="button button-secondary" id="randomColorSequence">✳ Random colors</button>
+                <span class="toolbar-spacer"></span>
+                <button class="button button-secondary" id="previewMath">Preview formula</button>
+                <button class="button button-primary" id="addMathScene">＋ Add to playlist</button>
+              </div>
+              <p class="math-note">Expressions use a restricted evaluator; Python code is not run. The shape formula supplies <code>v</code>, RGB formulas set color directly, and the optional brightness mask applies the shape intensity.</p>
+            </section>
+          </section>
+
+          <section class="tab-panel draw-plugins-panel" id="drawPluginsPanel" role="tabpanel" aria-label="Pixel drawing and plugins" hidden>
+            <section class="card pixel-card">
+              <div class="card-heading"><div><span class="section-kicker">FRAME-BY-FRAME ART</span><h2>Pixel character painter</h2></div><span class="count-pill" id="spriteDimensions">30 × 8 GRID</span></div>
+              <p class="panel-copy">Paint, add frames, and use the previous frame as a guide with onion skinning.</p>
+              <div class="editor-toolbar">
+                <label class="color-control"><input id="brushColor" type="color" value="#00a8ff"><span class="color-dot"></span> Brush color</label>
+                <button class="button button-secondary compact" id="clearFrame">Clear frame</button>
+                <label class="onion-control"><input id="onionSkin" type="checkbox" checked> Onion skin</label>
+                <span class="toolbar-spacer"></span>
+                <button class="button button-secondary compact" id="resetSprite">New drawing</button>
+                <button class="button button-secondary compact" id="addSpriteFrame">＋ Add frame</button>
+                <div class="frame-nav"><button class="item-action" id="spritePrevFrame" aria-label="Previous sprite frame">‹</button><span class="frame-count" id="spriteFrameLabel">FRAME 1 / 1</span><button class="item-action" id="spriteNextFrame" aria-label="Next sprite frame">›</button></div>
+              </div>
+              <div class="paint-wrap"><canvas id="paintCanvas"></canvas></div>
+              <div class="pixel-footer"><span class="tiny-note">CLICK OR DRAG TO PAINT · RGB FRAMES</span><button class="button button-primary" id="useSprite">＋ Add sprite to playlist</button></div>
+            </section>
+
+            <section class="card plugins-card">
+              <div class="card-heading"><div><span class="section-kicker">LOCAL PYTHON EXTENSIONS</span><h2>Animation plugins</h2></div><div class="plugin-header-actions"><button class="button button-secondary compact" id="reloadPlugins">↻ Reload</button><button class="button button-secondary compact" id="uploadPlugin">＋ Upload .py</button><input id="pluginFile" type="file" accept=".py,text/x-python" hidden></div></div>
+              <div class="plugin-warning"><strong>Only install scripts you trust.</strong> Plugins run as Python code with this app user's local permissions.</div>
+              <div class="plugin-list" id="pluginList"></div>
+            </section>
+          </section>
+        </div>
+
+        <aside class="card simulator-card">
+          <div class="sim-heading"><div><span class="section-kicker">LIVE PREVIEW</span><h2>Toran simulator</h2></div><span class="live-badge"><span class="live-dot"></span> LIVE</span></div>
+          <div class="sim-stage">
+            <div class="stage-label"><span>12 MM LED ARRAY</span><span id="resolutionLabel">30 × 8</span></div>
+            <canvas id="ledCanvas" aria-label="Live LED animation preview"></canvas>
+            <div class="stage-floor"></div>
+          </div>
+          <div class="sim-controls">
+            <button class="play-button" id="playButton" aria-label="Pause animation">Ⅱ</button>
+            <span class="time-display"><strong id="currentTime">00:00</strong><span> / </span><span id="totalTime">00:02</span></span>
+            <input id="frameScrubber" type="range" min="0" max="11" value="0" aria-label="Animation frame">
+            <span class="frame-count" id="frameCount">01 / 12</span>
+          </div>
+          <div class="player-actions">
+            <button class="item-action" id="restartPreview" type="button">↺ Restart</button>
+            <button class="item-action" id="previousFrame" type="button" aria-label="Previous frame">← Frame</button>
+            <button class="item-action" id="nextFrame" type="button" aria-label="Next frame">Frame →</button>
+          </div>
+          <div class="animation-nav">
+            <button class="item-action" id="previousAnimation" type="button">‹ Previous</button>
+            <button class="item-action" id="nextAnimation" type="button">Next ›</button>
+            <label class="overlay-control"><input id="loopToggle" type="checkbox" checked> Loop</label>
+            <button class="item-action" id="fullscreenPreview" type="button">⛶ Fullscreen</button>
+          </div>
+          <div class="speed-row"><span>PLAYBACK SPEED</span><input id="playSpeed" type="range" min="5" max="30" value="20"><strong id="playSpeedLabel">20 FPS</strong></div>
+          <div class="display-adjustments">
+            <label>Brightness <input id="previewBrightness" type="range" min="0" max="200" value="100"><output id="brightnessLabel">100%</output></label>
+            <div class="rgb-balance" aria-label="RGB channel balance">
+              <label>R <input id="redBalance" type="range" min="0" max="200" value="100"></label>
+              <label>G <input id="greenBalance" type="range" min="0" max="200" value="100"></label>
+              <label>B <input id="blueBalance" type="range" min="0" max="200" value="100"></label>
+            </div>
+          </div>
+          <div class="sim-footer"><span><span class="led-dot"></span> <b id="pixelCount">240</b> pixels</span><span class="sim-foot-separator"></span><span>RGB · 12 mm pitch</span><label class="overlay-control"><input id="wireOverlay" type="checkbox" checked> Wire</label></div>
+          <div class="sim-actions"><button class="button button-secondary" id="openEditor">✎ Draw custom sprite</button><button class="button button-primary" id="exportButton">↥ Export .SWF</button></div>
+          <p class="export-hint">SWF is a legacy Flash animation. T1000 / LEDEdit compatibility is unverified; confirm the device import format before use.</p>
+        </aside>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </main>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
